@@ -12,16 +12,13 @@ import (
 	"strings"
 	"testing"
 
+	prefeituraclient "github.com/hugocorbucci/onde-2a-dose-backend/internal/clients/prefeitura"
 	deps "github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies"
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies/dependenciesfakes"
+	"github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies/prefeitura"
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-const (
-	contentTypeHeader = "Content-Type"
-	formValue = "application/x-www-form-urlencoded"
 )
 
 type HTTPClient interface {
@@ -59,7 +56,7 @@ func TestHomeReturns404(t *testing.T) {
 func TestPostDataRawWithoutBodyReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", nil)
-		httpReq.Header.Add(contentTypeHeader, formValue)
+		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 
 		resp, err := deps.HTTPClient.Do(httpReq)
@@ -90,7 +87,7 @@ func TestPostDataRawWithBodyButNoFormEncodingHeaderReturnsError(t *testing.T) {
 func TestPostDataRawWithIncorrectBodyKeyReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dada=a"))
-		httpReq.Header.Add(contentTypeHeader, formValue)
+		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 
 		resp, err := deps.HTTPClient.Do(httpReq)
@@ -106,7 +103,7 @@ func TestPostDataRawWithIncorrectBodyKeyReturnsError(t *testing.T) {
 func TestPostDataRawWithCorrectEmptyBodyKeyReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dados="))
-		httpReq.Header.Add(contentTypeHeader, formValue)
+		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 
 		resp, err := deps.HTTPClient.Do(httpReq)
@@ -122,16 +119,39 @@ func TestPostDataRawWithCorrectEmptyBodyKeyReturnsError(t *testing.T) {
 func TestPostDataRawWithCorrectBodyReturnsRawOriginJSON(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dados=dados"))
-		httpReq.Header.Add(contentTypeHeader, formValue)
+		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
+
+		if deps.PrefeituraFake != nil {
+			deps.PrefeituraFake.FetchReturns([]*prefeitura.DeOlhoNaFilaUnit{
+				{
+					IDStr:             "1",
+					Name:              "Teste",
+					Address:           "Rua dos bobos, 0",
+					TypeName:          "POSTO VOLANTE",
+					TypeIDStr:         "4",
+					NeighborhoodName:  "Imaginário",
+					NeighborhoodIDStr: "0",
+					RegionName:        "CENTRO",
+					RegionIDStr:       "1",
+					LastUpdatedAtStr:  "2021-08-11 20:00:00.000",
+					LineIndexStr:      "1",
+					LineStatus:        "SEM FILA",
+					CoronaVacStr:      "0",
+					AstraZenecaStr:    "1",
+					PfizerStr:         "0",
+				},
+			}, nil)
+		}
 
 		resp, err := deps.HTTPClient.Do(httpReq)
 		require.NoError(t, err, "error making request %+v", httpReq)
 
 		require.Equal(t, http.StatusOK, resp.StatusCode, "expected status code to match for req %+v", httpReq)
-		body := &map[string]interface{}{}
-		err = json.NewDecoder(resp.Body).Decode(body)
+		body := []map[string]interface{}{}
+		err = json.NewDecoder(resp.Body).Decode(&body)
 		require.NoError(t, err, "unexpected error reading response body")
+		assert.Len(t, body, 1, "expected body size to match")
 	})
 }
 

@@ -59,8 +59,9 @@ func (h *httpHandler) rawData(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *httpHandler) data(w http.ResponseWriter, req *http.Request) {
+func (h *httpHandler) data(w http.ResponseWriter, _ *http.Request) {
 	// TODO: Implement
+	h.writeError(w, http.StatusNotImplemented, "not implemented yet", nil)
 }
 
 func (h *httpHandler) writeError(w http.ResponseWriter, statusCode int, baseMessage string, err error) {

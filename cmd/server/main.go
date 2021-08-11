@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/clients/prefeitura"
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/server"
@@ -12,6 +13,7 @@ import (
 
 const (
 	defaultPort = "8080"
+	fetchTimeout = 3 * time.Second
 )
 
 func main() {
@@ -22,7 +24,12 @@ func main() {
 	}
 	addr := net.JoinHostPort("", port)
 
-	prefeituraClient := &prefeitura.Client{HTTPClient: http.DefaultClient}
+	httpClient := http.DefaultClient
+	httpClient.Timeout = fetchTimeout
+	httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	prefeituraClient := &prefeitura.Client{HTTPClient: httpClient}
 
 	ll.Println("Starting server on port", port)
 	s := server.NewHTTPServer(prefeituraClient)

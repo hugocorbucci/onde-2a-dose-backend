@@ -1,10 +1,12 @@
 package prefeitura
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -16,6 +18,11 @@ const (
 	prefeituraURL = "https://deolhonafila.prefeitura.sp.gov.br/processadores/dados.php"
 	bodyKey = "dados"
 	bodyValue = "dados"
+
+	// ContentTypeHeader is the header name for content-type
+	ContentTypeHeader = "Content-Type"
+	// FormContentType is the value of the header for www form encoded content
+	FormContentType = "application/x-www-form-urlencoded"
 )
 
 type Client struct {
@@ -24,6 +31,7 @@ type Client struct {
 
 func (c *Client) Fetch(ctx context.Context) ([]*prefeituradeps.DeOlhoNaFilaUnit, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, prefeituraURL, strings.NewReader(fmt.Sprintf("%s=%s", bodyKey, bodyValue)))
+	req.Header.Add(ContentTypeHeader, FormContentType)
 	if err != nil {
 		return nil, err
 	}
@@ -39,9 +47,16 @@ func (c *Client) Fetch(ctx context.Context) ([]*prefeituradeps.DeOlhoNaFilaUnit,
 		return nil, errors.New("empty body")
 	}
 
-	results := []*prefeituradeps.DeOlhoNaFilaUnit{}
-	err = json.NewDecoder(resp.Body).Decode(&results)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		return nil, err
+	}
+
+	results := []*prefeituradeps.DeOlhoNaFilaUnit{}
+	err = json.NewDecoder(bytes.NewReader(body)).Decode(&results)
+	if err != nil {
+		fmt.Println("error decoding", string(body))
 		return nil, err
 	}
 
