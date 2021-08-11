@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/clients/prefeitura"
 	deps "github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies"
@@ -101,6 +102,7 @@ func TestClient_FetchWorksWhenDownstreamReturnsValidResponse(t *testing.T) {
 {"equipamento":"GRCS ESCOLA DE SAMBA VAI-VAI","endereco":"Rua S\u00e3o Vicente, n\u00ba 276 - Bela Vista","tipo_posto":"POSTO VOLANTE","id_tipo_posto":"4","id_distrito":"1","distrito":"Bela Vista","id_crs":"1","crs":"CENTRO","data_hora":"2021-08-11 07:50:49.173","indice_fila":"5","status_fila":"N\u00c3O FUNCIONANDO","coronavac":"1","astrazeneca":"0","pfizer":"false","id_tb_unidades":"1571"}
 ]`)),
 	}, nil)
+	expectedLastUpdatedAt, err := time.Parse(time.RFC3339, "2021-08-11T07:50:49.173-03:00")
 	res, err := client.Fetch(context.Background())
 	require.NoError(t, err, "expected error to match")
 	if assert.Len(t, res, 1, "expected length to match") {
@@ -110,6 +112,6 @@ func TestClient_FetchWorksWhenDownstreamReturnsValidResponse(t *testing.T) {
 		assert.Equal(t, false, unit.HasAstraZeneca(), "expected astrazeneca to match")
 		assert.Equal(t, false, unit.HasPfizer(), "expected pfizer to match")
 		assert.Equal(t, true, unit.HasCoronaVac(), "expected coronavac to match")
-		// TODO: Assert on time
+		assert.WithinDuration(t, expectedLastUpdatedAt, unit.LastUpdatedAt(), time.Second, "expected last updated at to match")
 	}
 }

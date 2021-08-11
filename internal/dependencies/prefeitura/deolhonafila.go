@@ -1,13 +1,14 @@
 package prefeitura
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 )
 
 const (
-	// 2021-08-11 07:50:49.173
-	prefeituraDateLayout = "2006-01-02 19:04:05"
+	// DateLayout is the datetime layout used for the data_hora json payload
+	DateLayout = "2006-01-02 15:04:05.999Z07:00"
 )
 // {"equipamento":"GRCS ESCOLA DE SAMBA VAI-VAI","endereco":"Rua S\u00e3o Vicente, n\u00ba 276 - Bela Vista","tipo_posto":"POSTO VOLANTE","id_tipo_posto":"4","id_distrito":"1","distrito":"Bela Vista","id_crs":"1","crs":"CENTRO","data_hora":"2021-08-11 07:50:49.173","indice_fila":"5","status_fila":"N\u00c3O FUNCIONANDO","coronavac":"0","astrazeneca":"0","pfizer":"0","id_tb_unidades":"1571"}
 
@@ -75,7 +76,7 @@ func (u *DeOlhoNaFilaUnit) HasPfizer() bool {
 
 // LastUpdatedAt returns the last time information on this unit has been updated at
 func (u *DeOlhoNaFilaUnit) LastUpdatedAt() time.Time {
-	t, err := time.Parse(prefeituraDateLayout, u.LastUpdatedAtStr)
+	t, err := time.Parse(DateLayout, fmt.Sprintf("%s-03:00", u.LastUpdatedAtStr))
 	if err != nil {
 		return time.Unix(0, 0)
 	}
