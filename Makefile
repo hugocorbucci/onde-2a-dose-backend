@@ -9,6 +9,14 @@ test:
 	go test ./...
 .PHONY: test
 
+fakes: internal/dependenciesfakes/fake_de_olho_na_fila.go internal/dependenciesfakes/fake_httpclient.go
+
+internal/dependenciesfakes/fake_de_olho_na_fila.go: internal/dependencies/deolhonafila.go
+	go generate internal/dependencies/dependencies.go internal/dependencies/deolhonafila.go
+
+internal/dependenciesfakes/fake_httpclient.go: internal/dependencies/http.go
+	go generate internal/dependencies/dependencies.go internal/dependencies/http.go
+
 smoke_test:
 	$(MAKE) -C ${SERVER_PATH} $@
 .PHONY: smoke_test

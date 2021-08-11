@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/hugocorbucci/onde-2a-dose-backend/internal/clients/prefeitura"
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/server"
 )
 
@@ -21,8 +22,10 @@ func main() {
 	}
 	addr := net.JoinHostPort("", port)
 
+	prefeituraClient := &prefeitura.Client{HTTPClient: http.DefaultClient}
+
 	ll.Println("Starting server on port", port)
-	s := server.NewHTTPServer()
+	s := server.NewHTTPServer(prefeituraClient)
 	if err := http.ListenAndServe(addr, s); err != nil {
 		ll.Fatal("HTTP(s) server failed")
 	}

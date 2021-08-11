@@ -3,17 +3,25 @@ package server_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
+	deps "github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies"
+	"github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies/dependenciesfakes"
 	"github.com/hugocorbucci/onde-2a-dose-backend/internal/server"
-
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	contentTypeHeader = "Content-Type"
+	formValue = "application/x-www-form-urlencoded"
 )
 
 type HTTPClient interface {
@@ -35,8 +43,8 @@ func (c *InMemoryHTTPClient) Do(r *http.Request) (*http.Response, error) {
 }
 
 func TestHomeReturns404(t *testing.T) {
-	withDependencies(t, func(t *testing.T, deps *TestDependencies) {
-		httpReq, err := http.NewRequest(http.MethodGet, deps.BaseURL+"/", nil)
+	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, deps.BaseURL+"/", nil)
 		require.NoError(t, err, "could not create GET / request")
 
 		resp, err := deps.HTTPClient.Do(httpReq)
@@ -48,13 +56,95 @@ func TestHomeReturns404(t *testing.T) {
 	})
 }
 
+func TestPostDataRawWithoutBodyReturnsError(t *testing.T) {
+	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", nil)
+		httpReq.Header.Add(contentTypeHeader, formValue)
+		require.NoError(t, err, "could not create POST / request")
+
+		resp, err := deps.HTTPClient.Do(httpReq)
+		require.NoError(t, err, "error making request %+v", httpReq)
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected status code to match for req %+v", httpReq)
+		body, err := readBodyFrom(resp)
+		require.NoError(t, err, "unexpected error reading response body")
+		assert.Equal(t, "{\"error\":\"missing body\"}", body, "expected body to match")
+	})
+}
+
+func TestPostDataRawWithBodyButNoFormEncodingHeaderReturnsError(t *testing.T) {
+	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dada=a"))
+		require.NoError(t, err, "could not create POST / request")
+
+		resp, err := deps.HTTPClient.Do(httpReq)
+		require.NoError(t, err, "error making request %+v", httpReq)
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected status code to match for req %+v", httpReq)
+		body, err := readBodyFrom(resp)
+		require.NoError(t, err, "unexpected error reading response body")
+		assert.Equal(t, "{\"error\":\"missing body\"}", body, "expected body to match")
+	})
+}
+
+func TestPostDataRawWithIncorrectBodyKeyReturnsError(t *testing.T) {
+	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dada=a"))
+		httpReq.Header.Add(contentTypeHeader, formValue)
+		require.NoError(t, err, "could not create POST / request")
+
+		resp, err := deps.HTTPClient.Do(httpReq)
+		require.NoError(t, err, "error making request %+v", httpReq)
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected status code to match for req %+v", httpReq)
+		body, err := readBodyFrom(resp)
+		require.NoError(t, err, "unexpected error reading response body")
+		assert.Equal(t, "{\"error\":\"invalid body\"}", body, "expected body to match")
+	})
+}
+
+func TestPostDataRawWithCorrectEmptyBodyKeyReturnsError(t *testing.T) {
+	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dados="))
+		httpReq.Header.Add(contentTypeHeader, formValue)
+		require.NoError(t, err, "could not create POST / request")
+
+		resp, err := deps.HTTPClient.Do(httpReq)
+		require.NoError(t, err, "error making request %+v", httpReq)
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected status code to match for req %+v", httpReq)
+		body, err := readBodyFrom(resp)
+		require.NoError(t, err, "unexpected error reading response body")
+		assert.Equal(t, "{\"error\":\"invalid body\"}", body, "expected body to match")
+	})
+}
+
+func TestPostDataRawWithCorrectBodyReturnsRawOriginJSON(t *testing.T) {
+	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dados=dados"))
+		httpReq.Header.Add(contentTypeHeader, formValue)
+		require.NoError(t, err, "could not create POST / request")
+
+		resp, err := deps.HTTPClient.Do(httpReq)
+		require.NoError(t, err, "error making request %+v", httpReq)
+
+		require.Equal(t, http.StatusOK, resp.StatusCode, "expected status code to match for req %+v", httpReq)
+		body := &map[string]interface{}{}
+		err = json.NewDecoder(resp.Body).Decode(body)
+		require.NoError(t, err, "unexpected error reading response body")
+	})
+}
+
 // TestDependencies encapsulates the dependencies needed to run a test
 type TestDependencies struct {
 	BaseURL    string
 	HTTPClient HTTPClient
+
+	PrefeituraFake *dependenciesfakes.FakeDeOlhoNaFila
 }
 
-func withDependencies(baseT *testing.T, test func(*testing.T, *TestDependencies)) {
+func withDependencies(baseT *testing.T, test func(*testing.T, context.Context, *TestDependencies)) {
+	ctx := context.Background()
 	if len(os.Getenv("TARGET_URL")) == 0 {
 		testStates := map[string]func(*testing.T) (*TestDependencies, func()){
 			"unitServerTest":        unitDependencies,
@@ -64,11 +154,11 @@ func withDependencies(baseT *testing.T, test func(*testing.T, *TestDependencies)
 			baseT.Run(name, func(t *testing.T) {
 				deps, stop := dep(t)
 				defer stop()
-				test(t, deps)
+				test(t, ctx, deps)
 			})
 		}
 	} else {
-		test(baseT, smokeDependencies(baseT))
+		test(baseT, ctx, smokeDependencies(baseT))
 	}
 }
 
@@ -114,16 +204,19 @@ func (s *testStructure) Now() {
 }
 
 func unitDependencies(*testing.T) (*TestDependencies, func()) {
-	s := server.NewHTTPServer()
+	prefeituraClient := &dependenciesfakes.FakeDeOlhoNaFila{}
+	s := server.NewHTTPServer(prefeituraClient)
 	httpClient := &InMemoryHTTPClient{server: s}
 	return &TestDependencies{
 		BaseURL:    "",
 		HTTPClient: httpClient,
+		PrefeituraFake: prefeituraClient,
 	}, func() {}
 }
 
 func integrationDependencies(t *testing.T) (*TestDependencies, func()) {
-	baseURL, stop := startTestingHTTPServer(t)
+	prefeituraClient := &dependenciesfakes.FakeDeOlhoNaFila{}
+	baseURL, stop := startTestingHTTPServer(t, prefeituraClient)
 	http.DefaultClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
@@ -131,6 +224,7 @@ func integrationDependencies(t *testing.T) (*TestDependencies, func()) {
 	return &TestDependencies{
 		BaseURL:    baseURL,
 		HTTPClient: http.DefaultClient,
+		PrefeituraFake: prefeituraClient,
 	}, stop
 }
 
@@ -144,9 +238,9 @@ func smokeDependencies(_ *testing.T) *TestDependencies {
 	}
 }
 
-func startTestingHTTPServer(t *testing.T) (string, func()) {
+func startTestingHTTPServer(t *testing.T, prefeitura deps.DeOlhoNaFila) (string, func()) {
 	ctx := context.Background()
-	s := server.NewHTTPServer()
+	s := server.NewHTTPServer(prefeitura)
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
