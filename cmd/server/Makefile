@@ -36,7 +36,7 @@ target/$(NAME)-darwin: target $(shell find ../../internal -type f) $(shell find 
 	([ "$(shell uname)" = "Darwin" ] && GOOS='darwin' go build -o $@ .) || echo "Can't compile darwin executable"
 
 target/$(NAME)-linux64: target $(shell find ../../internal -type f) $(shell find . -path ./target -prune -o -type f)
-	([ "$(shell uname)" = "Darwin" ] && docker run --rm -v "${GOPATH}":/home/guest -w "/home/guest/${SERVER_RELATIVE}" -e "CGO_ENABLED=0" -e "GOPATH=/home/guest" golang:1.13 go build -o $@ .) || GOOS='linux' go build -o $@ .
+	([ "$(shell uname)" = "Darwin" ] && docker run --rm -v "${GOPATH}":/home/guest -w "/home/guest/${SERVER_RELATIVE}" -e "CGO_ENABLED=0" -e "GOPATH=/home/guest" golang:1.16 go build -o $@ .) || GOOS='linux' go build -o $@ .
 
 build: target/$(NAME)-linux64 target/$(NAME)-darwin
 .PHONY: build
