@@ -13,7 +13,7 @@ import (
 
 const (
 	defaultPort = "8080"
-	fetchTimeout = 3 * time.Second
+	fetchTimeout = 10 * time.Second
 )
 
 func main() {
