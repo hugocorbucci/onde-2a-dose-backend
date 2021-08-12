@@ -55,7 +55,7 @@ func TestHomeReturns404(t *testing.T) {
 
 func TestPostDataRawWithoutBodyReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", nil)
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/data.raw", nil)
 		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 
@@ -71,7 +71,7 @@ func TestPostDataRawWithoutBodyReturnsError(t *testing.T) {
 
 func TestPostDataRawWithBodyButNoFormEncodingHeaderReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dada=a"))
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/data.raw", strings.NewReader("dada=a"))
 		require.NoError(t, err, "could not create POST / request")
 
 		resp, err := deps.HTTPClient.Do(httpReq)
@@ -86,7 +86,7 @@ func TestPostDataRawWithBodyButNoFormEncodingHeaderReturnsError(t *testing.T) {
 
 func TestPostDataRawWithIncorrectBodyKeyReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dada=a"))
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/data.raw", strings.NewReader("dada=a"))
 		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 
@@ -102,7 +102,7 @@ func TestPostDataRawWithIncorrectBodyKeyReturnsError(t *testing.T) {
 
 func TestPostDataRawWithCorrectEmptyBodyKeyReturnsError(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dados="))
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/data.raw", strings.NewReader("dados="))
 		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 
@@ -118,7 +118,7 @@ func TestPostDataRawWithCorrectEmptyBodyKeyReturnsError(t *testing.T) {
 
 func TestPostDataRawWithCorrectBodyReturnsRawOriginJSON(t *testing.T) {
 	withDependencies(t, func(t *testing.T, ctx context.Context, deps *TestDependencies) {
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/api/data.raw", strings.NewReader("dados=dados"))
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deps.BaseURL+"/data.raw", strings.NewReader("dados=dados"))
 		httpReq.Header.Add(prefeituraclient.ContentTypeHeader, prefeituraclient.FormContentType)
 		require.NoError(t, err, "could not create POST / request")
 

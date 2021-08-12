@@ -31,8 +31,8 @@ func NewHTTPServer(client deps.DeOlhoNaFila) *Server {
 	handler := &httpHandler{DeOlhoNaFilaClient: client}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/data.raw", handler.rawData).Methods(http.MethodPost)
-	r.HandleFunc("/api/data", handler.data).Methods(http.MethodGet)
+	r.HandleFunc("/data.raw", handler.rawData).Methods(http.MethodPost)
+	r.HandleFunc("/data", handler.data).Methods(http.MethodGet)
 
 	return &Server{r}
 }
