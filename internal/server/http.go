@@ -7,11 +7,14 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/hugocorbucci/onde-2a-dose-backend/internal/clients/prefeitura"
 	deps "github.com/hugocorbucci/onde-2a-dose-backend/internal/dependencies"
 )
 
 const (
 	mandatoryBodyFieldName = "dados"
+
+	JSONContentType = "application/json; charset=UTF-8"
 )
 
 // Server represents the HTTP server
@@ -52,6 +55,7 @@ func (h *httpHandler) rawData(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Add(prefeitura.ContentTypeHeader, JSONContentType)
 	err = json.NewEncoder(w).Encode(units)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "error encoding data", err)
@@ -66,6 +70,7 @@ func (h *httpHandler) data(w http.ResponseWriter, _ *http.Request) {
 
 func (h *httpHandler) writeError(w http.ResponseWriter, statusCode int, baseMessage string, err error) {
 	w.WriteHeader(statusCode)
+	w.Header().Add(prefeitura.ContentTypeHeader, JSONContentType)
 
 	errorMsg := baseMessage
 	if err != nil {
